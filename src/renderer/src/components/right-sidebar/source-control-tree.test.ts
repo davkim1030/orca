@@ -86,29 +86,40 @@ describe('buildSourceControlTree', () => {
     ])
   })
 
-  it('orders file entries to match the flattened tree file rows regardless of input order', () => {
-    // Why: the PR "Files changed" diff sections must render in the same order as
-    // the file tree; this helper is the shared ordering both views rely on.
+  it('orders file entries to match the file tree the PR view actually renders', () => {
+    // Why: the PR "Files changed" diff sections order via
+    // collectSourceControlTreeFileEntriesInOrder, while the file tree renders via
+    // compactSourceControlTree(buildSourceControlTree(...)) + flatten (see
+    // CombinedDiffFileTree.buildBranchRows). Assert both leaf orders match so the
+    // list and diff stay in sync — including that compaction preserves leaf order.
     const entries: GitBranchChangeEntry[] = [
       { path: 'README.md', status: 'modified' },
-      { path: 'src/index.ts', status: 'modified' },
-      { path: 'src/components/Button.tsx', status: 'added' },
+      { path: 'src/renderer/index.ts', status: 'modified' },
+      { path: 'src/renderer/components/Button.tsx', status: 'added' },
+      { path: 'src/main/app.ts', status: 'modified' },
       { path: 'docs/guide.md', status: 'modified' }
     ]
 
-    const tree = buildSourceControlTree('combined-commit', entries)
-    const treeFileRows = flattenSourceControlTree(tree, new Set())
+    // Mirror CombinedDiffFileTree.buildBranchRows exactly (compact + flatten).
+    const renderedTreeFileOrder = flattenSourceControlTree(
+      compactSourceControlTree(buildSourceControlTree('combined-commit', entries)),
+      new Set()
+    )
       .filter((node) => node.type === 'file')
       .map((node) => node.path)
-    const orderedPaths = collectSourceControlTreeFileEntriesInOrder(tree).map((item) => item.path)
 
-    expect(orderedPaths).toEqual(treeFileRows)
-    // Input API order (README, src/index, src/components/Button, docs) is
-    // reordered into directory-first, path-sorted tree order.
-    expect(orderedPaths).toEqual([
+    const sectionOrder = collectSourceControlTreeFileEntriesInOrder(
+      buildSourceControlTree('combined-commit', entries)
+    ).map((item) => item.path)
+
+    // The diff section order must equal what the file tree renders.
+    expect(sectionOrder).toEqual(renderedTreeFileOrder)
+    // API input order is reordered into directory-first, path-sorted tree order.
+    expect(sectionOrder).toEqual([
       'docs/guide.md',
-      'src/components/Button.tsx',
-      'src/index.ts',
+      'src/main/app.ts',
+      'src/renderer/components/Button.tsx',
+      'src/renderer/index.ts',
       'README.md'
     ])
   })

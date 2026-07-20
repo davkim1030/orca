@@ -264,12 +264,21 @@ export function applyGitStatusEntryAreasToSourceControlTree(
   return nodes.map(applyEntryArea)
 }
 
+/**
+ * Flattens source-control tree roots into their file entries in tree render
+ * order — depth-first, directories before files, path-sorted within each level.
+ *
+ * Why: the file list and the PR "Files changed" diff sections must share one
+ * ordering. Deriving the section order from the same tree the list renders keeps
+ * the two views in sync (GitHub-web behavior).
+ *
+ * @param nodes - Top-level source-control tree nodes (from `buildSourceControlTree`).
+ * @returns The file entries in the order their rows appear in the tree.
+ */
 export function collectSourceControlTreeFileEntriesInOrder<
   Entry extends SourceControlTreeEntry,
   Area extends string
 >(nodes: SourceControlTreeNode<Entry, Area>[]): Entry[] {
-  // Why: file rows render in tree DFS order (directories first, then path-sorted
-  // files); reuse it to order diff sections the same way so the list matches.
   return nodes.flatMap((node) => collectSourceControlTreeFileEntries(node))
 }
 

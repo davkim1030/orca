@@ -80,6 +80,10 @@ import {
   handleCombinedDiffFileTreeNavigation
 } from '@/components/editor/CombinedDiffFileTree'
 import {
+  buildSourceControlTree,
+  collectSourceControlTreeFileEntriesInOrder
+} from '@/components/right-sidebar/source-control-tree'
+import {
   getDiffSectionEstimatedHeight,
   isIntrinsicHeightImageDiff
 } from '@/components/editor/diff-section-layout'
@@ -2259,7 +2263,12 @@ function PRFilesCombinedDiffViewer({
     if (entriesCacheRef.current?.signature === diffEntrySignature) {
       return entriesCacheRef.current.entries
     }
-    const nextEntries = files.map(gitHubPRFileToBranchEntry)
+    // Why: the file tree renders in source-control DFS order (directories first,
+    // then path-sorted files); order the diff sections identically so the list
+    // and the diff detail scroll match, like GitHub's Files changed view.
+    const nextEntries = collectSourceControlTreeFileEntriesInOrder(
+      buildSourceControlTree('combined-commit', files.map(gitHubPRFileToBranchEntry))
+    )
     entriesCacheRef.current = {
       signature: diffEntrySignature,
       entries: nextEntries

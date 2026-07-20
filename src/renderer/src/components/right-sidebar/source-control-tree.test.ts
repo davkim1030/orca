@@ -5,6 +5,7 @@ import {
   buildSourceControlTree,
   applyGitStatusEntryAreasToSourceControlTree,
   collectSourceControlTreeFileEntries,
+  collectSourceControlTreeFileEntriesInOrder,
   compactSourceControlTree,
   flattenSourceControlTree,
   namespaceSourceControlTreeDirectoryKeys
@@ -82,6 +83,33 @@ describe('buildSourceControlTree', () => {
     expect(src ? collectSourceControlTreeFileEntries(src).map((item) => item.path) : []).toEqual([
       'src/components/Button.tsx',
       'src/app.ts'
+    ])
+  })
+
+  it('orders file entries to match the flattened tree file rows regardless of input order', () => {
+    // Why: the PR "Files changed" diff sections must render in the same order as
+    // the file tree; this helper is the shared ordering both views rely on.
+    const entries: GitBranchChangeEntry[] = [
+      { path: 'README.md', status: 'modified' },
+      { path: 'src/index.ts', status: 'modified' },
+      { path: 'src/components/Button.tsx', status: 'added' },
+      { path: 'docs/guide.md', status: 'modified' }
+    ]
+
+    const tree = buildSourceControlTree('combined-commit', entries)
+    const treeFileRows = flattenSourceControlTree(tree, new Set())
+      .filter((node) => node.type === 'file')
+      .map((node) => node.path)
+    const orderedPaths = collectSourceControlTreeFileEntriesInOrder(tree).map((item) => item.path)
+
+    expect(orderedPaths).toEqual(treeFileRows)
+    // Input API order (README, src/index, src/components/Button, docs) is
+    // reordered into directory-first, path-sorted tree order.
+    expect(orderedPaths).toEqual([
+      'docs/guide.md',
+      'src/components/Button.tsx',
+      'src/index.ts',
+      'README.md'
     ])
   })
 

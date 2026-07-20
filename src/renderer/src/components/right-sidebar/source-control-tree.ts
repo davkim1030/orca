@@ -264,6 +264,15 @@ export function applyGitStatusEntryAreasToSourceControlTree(
   return nodes.map(applyEntryArea)
 }
 
+export function collectSourceControlTreeFileEntriesInOrder<
+  Entry extends SourceControlTreeEntry,
+  Area extends string
+>(nodes: SourceControlTreeNode<Entry, Area>[]): Entry[] {
+  // Why: file rows render in tree DFS order (directories first, then path-sorted
+  // files); reuse it to order diff sections the same way so the list matches.
+  return nodes.flatMap((node) => collectSourceControlTreeFileEntries(node))
+}
+
 export function collectSourceControlTreeFileEntries<
   Entry extends SourceControlTreeEntry,
   Area extends string
